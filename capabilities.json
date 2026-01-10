@@ -1,0 +1,10 @@
+{
+    "static_scraping": true,
+    "js_rendering": false,
+    "click_tabs": false,
+    "load_more_clicks": false,
+    "infinite_scroll": false,
+    "pagination_links": false,
+    "noise_filtering": false,
+    "html_truncation": true
+}

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Scrapper</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --text-color: #e6edf3;
+            --accent-color: #238636;
+            --secondary-bg: #161b22;
+            --border-color: #30363d;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 { margin-bottom: 20px; }
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        input[type="url"] {
+            flex-grow: 1;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background-color: var(--secondary-bg);
+            color: var(--text-color);
+        }
+        button {
+            padding: 10px 20px;
+            border-radius: 6px;
+            border: none;
+            background-color: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { opacity: 0.9; }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
+        #results { width: 100%; }
+        .error {
+            color: #f85149;
+            background-color: rgba(248, 81, 73, 0.1);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .section {
+            background-color: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        .section-header {
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #21262d;
+        }
+        .section-header:hover { background-color: #30363d; }
+        .section-content {
+            padding: 15px;
+            display: none;
+            border-top: 1px solid var(--border-color);
+        }
+        .section-content.open { display: block; }
+        pre {
+            background-color: #0d1117;
+            padding: 10px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 0;
+        }
+        .loader {
+            border: 4px solid var(--secondary-bg);
+            border-top: 4px solid var(--accent-color);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .meta-info {
+            background-color: var(--secondary-bg);
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Web Scrapper</h1>
+        <div class="input-group">
+            <input type="url" id="urlInput" placeholder="Enter URL to scrape (e.g. https://example.com)" required>
+            <button id="scrapeBtn">Scrape</button>
+        </div>
+        <div id="loader" class="loader"></div>
+        <div id="error" class="error"></div>
+        
+        <div id="results" style="display: none;">
+            <div class="meta-info" id="metaInfo"></div>
+            <button id="downloadBtn" style="margin-bottom: 15px; background-color: #1f6feb;">Download JSON</button>
+            <div id="sectionsList"></div>
+        </div>
+    </div>
+
+    <script>
+        const scrapeBtn = document.getElementById('scrapeBtn');
+        const urlInput = document.getElementById('urlInput');
+        const loader = document.getElementById('loader');
+        const errorDiv = document.getElementById('error');
+        const resultsDiv = document.getElementById('results');
+        const metaInfo = document.getElementById('metaInfo');
+        const sectionsList = document.getElementById('sectionsList');
+        const downloadBtn = document.getElementById('downloadBtn');
+        
+        let currentData = null;
+
+        scrapeBtn.addEventListener('click', async () => {
+            const url = urlInput.value.trim();
+            if (!url) return;
+
+            // Reset UI
+            errorDiv.style.display = 'none';
+            resultsDiv.style.display = 'none';
+            sectionsList.innerHTML = '';
+            loader.style.display = 'block';
+            scrapeBtn.disabled = true;
+
+            try {
+                const response = await fetch('/scrape', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await response.json();
+                
+                if (data.detail) throw new Error(JSON.stringify(data.detail));
+                
+                currentData = data;
+                renderResults(data);
+            } catch (err) {
+                errorDiv.textContent = `Error: ${err.message}`;
+                errorDiv.style.display = 'block';
+            } finally {
+                loader.style.display = 'none';
+                scrapeBtn.disabled = false;
+            }
+        });
+
+        function renderResults(data) {
+            resultsDiv.style.display = 'block';
+            const res = data.result;
+            
+            // Meta info
+            metaInfo.innerHTML = `
+                <h3>${res.meta.title || 'No Title'}</h3>
+                <p>${res.meta.description || 'No description'}</p>
+                <small>Scraped at: ${res.scrapedAt} | Depth: ${res.interactions.pages.length}</small>
+            `;
+
+            // Sections
+            res.sections.forEach(section => {
+                const secDiv = document.createElement('div');
+                secDiv.className = 'section';
+                secDiv.innerHTML = `
+                    <div class="section-header" onclick="this.nextElementSibling.classList.toggle('open')">
+                        <strong>${section.label || 'Untitled Section'}</strong>
+                        <span style="font-size: 0.8em; opacity: 0.7;">${section.type}</span>
+                    </div>
+                    <div class="section-content">
+                        <pre>${JSON.stringify(section, null, 2)}</pre>
+                    </div>
+                `;
+                sectionsList.appendChild(secDiv);
+            });
+        }
+
+        downloadBtn.addEventListener('click', () => {
+            if (!currentData) return;
+            const blob = new Blob([JSON.stringify(currentData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'scrape_result.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>
