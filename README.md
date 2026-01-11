@@ -7,7 +7,7 @@ Web Scrapper is a modern, Python-powered web scraping platform built with FastAP
 
 ## ✨ Why Use This Project?
 
-- **Versatile Scraping:** Handles both static and JavaScript-heavy sites using hybrid scraping (httpx + Playwright).
+- **Versatile Scraping:** handles both static and JavaScript-heavy sites using hybrid scraping (httpx + Playwright).
 - **Structured Extraction:** Breaks down web pages into semantic sections, capturing headings, text, links, images, lists, and tables.
 - **Meta Intelligence:** Extracts page metadata (title, description, language, canonical URL) for SEO and analytics.
 - **Automated Interactions:** Simulates user actions (clicks, scrolls, pagination) for deep content extraction.
