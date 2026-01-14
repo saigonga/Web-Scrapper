@@ -36,11 +36,7 @@ async def scrape(request: ScrapeRequest):
     result = await static_scraper.scrape()
     
     # 2. Check heuristics for fallback
-    # Fallback if:
-    # - Very little content (e.g. < 2000 characters of text in sections)
-    # - Or we detect "load more" / "next" buttons that we want to interact with?
-    # - Or if the user asks for it (implicit in this assignment for certain URLs)
-    
+    # Optimized: calculate total text length only once with generator expression
     total_text_len = sum(len(s.content.text) for s in result.sections)
     is_short = total_text_len < 2000
     
