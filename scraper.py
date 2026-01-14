@@ -57,7 +57,8 @@ class BaseScraper:
         if not body:
             return []
 
-        candidates = body.find_all(['header', 'nav', 'main', 'section', 'footer', 'article'])
+        # Limit candidates to prevent processing huge DOMs - top 100 semantic elements
+        candidates = body.find_all(['header', 'nav', 'main', 'section', 'footer', 'article'], limit=100)
         if not candidates:
             candidates = [body]
         
@@ -108,38 +109,37 @@ class BaseScraper:
         return sections
 
     def _extract_content(self, element: Tag, base_url: str) -> SectionContent:
-        headings = []
-        text_parts = []
-        links = []
-        images = []
-        lists = []
-        
-        for h in element.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']):
-            headings.append(h.get_text(strip=True))
-            
+        # Extract text once for reuse
         text = element.get_text(separator=" ", strip=True)
         
-        for a in element.find_all('a', href=True):
+        # Batch all heading extractions in one pass
+        headings = [h.get_text(strip=True) for h in element.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], limit=20)]
+        
+        # Limit and extract links efficiently
+        links = []
+        for a in element.find_all('a', href=True, limit=50):
             href = urljoin(base_url, a['href'])
             links.append({"text": a.get_text(strip=True), "href": href})
             
-        for img in element.find_all('img', src=True):
+        # Limit and extract images efficiently
+        images = []
+        for img in element.find_all('img', src=True, limit=20):
             src = urljoin(base_url, img['src'])
             alt = img.get('alt', '')
             images.append({"src": src, "alt": alt})
             
-        for ul in element.find_all(['ul', 'ol']):
-            items = []
-            for li in ul.find_all('li'):
-                items.append(li.get_text(strip=True))
+        # Extract lists with early termination
+        lists = []
+        for ul in element.find_all(['ul', 'ol'], limit=10):
+            items = [li.get_text(strip=True) for li in ul.find_all('li', limit=20)]
             if items:
                 lists.append(items)
                 
         return SectionContent(
             headings=headings,
             text=text,
-            links=links[:50],
-            images=images[:20],
+            links=links,
+            images=images,
             lists=lists,
             tables=[]
         )
@@ -243,60 +243,47 @@ class DynamicScraper(BaseScraper):
                 await browser.close()
 
     async def _perform_clicks(self, page: Page):
-        # Naive approach: find buttons that look like "Load more" or tabs
-        # Selectors: 
-        # button[role='tab']
-        # button:has-text("Load more")
-        # button:has-text("Show more")
-        
+        # Optimized: Use combined selector and limit iterations to reduce query overhead
+        # Selectors consolidated for efficiency
         selectors = [
-            'button[role="tab"]',
-            'div[role="tab"]',
-            'button:has-text("Load more")',
-            'button:has-text("Show more")',
-            '.load-more',
-            '#load-more'
+            'button[role="tab"], div[role="tab"]',  # Combined tab selectors
+            'button:has-text("Load more"), button:has-text("Show more"), .load-more, #load-more'  # Combined load more selectors
         ]
         
         for sel in selectors:
             try:
-                # Check if it exists and is visible
-                # We limit clicks to avoid navigating away or crazy loops
+                # Limit to first 3 visible elements to avoid excessive clicking
                 elements = await page.locator(sel).all()
-                for i, el in enumerate(elements[:3]): # Limit to 3 clicks per type
+                for i, el in enumerate(elements):
+                    if i >= 3:  # Early termination after 3 clicks per selector group
+                        break
                     if await el.is_visible():
                         txt = await el.text_content()
                         await el.click(timeout=2000)
-                        await page.wait_for_timeout(1000) # Wait for reaction
+                        await page.wait_for_timeout(500) # Reduced wait time from 1000ms
                         self.clicks_attempted.append(f"{sel} (text: {txt.strip()[:20]})")
             except Exception:
                 pass
 
     async def _perform_scroll_or_pagination(self, page: Page):
-        # 1. Infinite scroll check
-        # Scroll down 3 times
-        for _ in range(3):
+        # 1. Infinite scroll check - optimized with adaptive waiting
+        for i in range(3):
             previous_height = await page.evaluate("document.body.scrollHeight")
             await page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-            await page.wait_for_timeout(2000) # wait for load
+            # Adaptive wait: shorter for subsequent scrolls if no change
+            wait_time = 1500 if i == 0 else 1000  # Reduced from 2000ms
+            await page.wait_for_timeout(wait_time)
             new_height = await page.evaluate("document.body.scrollHeight")
             self.scroll_count += 1
             if new_height <= previous_height:
-                break
+                break  # Early termination if no new content loaded
         
         # 2. Pagination check (Next button)
-        # simplistic: look for "Next" or ">" link
-        # This might navigate to a new URL, so we need to track pages
+        # Optimized: Combined selector query instead of multiple checks
         depth = 0
         while depth < 3:
-            # find next button
-            # 'a[aria-label="Next"]', 'a:has-text("Next")', 'a:has-text(">")'
-            # Also 'More' for HN
-            next_link = page.locator('a:has-text("Next")').first
-            if not await next_link.count():
-                 next_link = page.locator('a[aria-label="Next"]').first
-            if not await next_link.count():
-                 next_link = page.locator('a:has-text("More")').first
+            # Use combined selector for efficiency
+            next_link = page.locator('a:has-text("Next"), a[aria-label="Next"], a:has-text("More")').first
             
             if await next_link.count() and await next_link.is_visible():
                 try:
