@@ -5,6 +5,9 @@
 
 Web Scrapper is a modern, Python-powered web scraping platform built with FastAPI, Playwright, and BeautifulSoup. It demonstrates advanced Python engineering, asynchronous programming, and robust API design. This project is a showcase of my coding skills and a foundation for future data-driven applications.
 
+## Live Project
+Check Out : https://web-scrapper-kohl.vercel.app/
+
 ## ✨ Why Use This Project?
 
 - **Versatile Scraping:** handles both static and JavaScript-heavy sites using hybrid scraping (httpx + Playwright).
