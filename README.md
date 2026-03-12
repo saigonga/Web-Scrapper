@@ -1,7 +1,7 @@
   
 # Web Scrapper 
 
-![CI Pipeline](https://github.com/saigonga/Web-Scrapper/actions/workflows/ci.yml/badge.svg)
+![CI Pipeline](github.com/saigonga/Web-Scrapper/actions)
 
 Name:  APP_ENV
 Value: production
