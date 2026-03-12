@@ -1,6 +1,20 @@
   
 # Web Scrapper 
 
+![CI Pipeline](https://github.com/saigonga/Web-Scrapper/actions/workflows/ci.yml/badge.svg)
+```
+
+Commit. Now every recruiter who opens your repo sees a live green badge before reading anything.
+
+---
+
+**2. Add the secret**
+
+Go to repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+```
+Name:  APP_ENV
+Value: production
+
 ## 🚀 Overview
 
 Web Scrapper is a modern, Python-powered web scraping platform built with FastAPI, Playwright, and BeautifulSoup. It demonstrates advanced Python engineering, asynchronous programming, and robust API design. This project is a showcase of my coding skills and a foundation for future data-driven applications.
