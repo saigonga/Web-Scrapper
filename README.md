@@ -2,16 +2,7 @@
 # Web Scrapper 
 
 ![CI Pipeline](https://github.com/saigonga/Web-Scrapper/actions/workflows/ci.yml/badge.svg)
-```
 
-Commit. Now every recruiter who opens your repo sees a live green badge before reading anything.
-
----
-
-**2. Add the secret**
-
-Go to repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
-```
 Name:  APP_ENV
 Value: production
 
