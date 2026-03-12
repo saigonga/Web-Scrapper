@@ -73,10 +73,3 @@ jobs:
           pip install -r requirements.txt
           safety check --full-report
         continue-on-error: true
-```
-
----
-
-**Commit message:**
-```
-Fix: upgrade actions to v4 - resolve deprecated artifact action
